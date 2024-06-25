@@ -5,7 +5,7 @@
 
 二、解决方案
 1. 加锁 map+sync.RWMutex，通过读写锁，让读写、写写互斥，可以同时读；而且sync.RWMutex是写者优先，可以保证写数据的性能，读数据能读到最新数据
-2. sync.map；sync.map本身通过空间换时间,存在只读map和写map
+2. sync.map；sync.map本身通过空间换时间,存在只读map和写map进行读写分离，通过锁保证线程安全
 2.1 sync.map查询时先查读map，查询不到加锁查写map
 2.2 增改时，会加锁写入写map并重置读map
 2.3 明显sync.map适合大量读的场景，如果是大量写的场景，读map会读不到数据大量加锁，而写map会变成读map，而且写操作会更新两个map，损耗性能；实际使用中一般都是map+sync.RWMutex
