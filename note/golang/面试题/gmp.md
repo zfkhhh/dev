@@ -29,3 +29,9 @@ gmp调度器：g是goruntine，m是线程，p是调度器
 3. 抢占：一个goruntine最大占用cpu 10ms，防止其他goruntine饿死（go 1.14的异步式抢占，会启动sysmon线程监控其他线程，当其他线程goruntine执行超过10ms,会发送一个抢占信号量，中断协程执行）
 4. 全局g队列：让线程可以从全局队列获取g
 
+
+四、g,m,p数量
+1. g的数量：g数量受cpu，内存，linux文件描述符限制，goroutine栈大小是2-4kb，2g内存也就是数十万个，但同时也看g中执行的程序，如打开文件，io等，还受linux本身文件描述符数量限制
+2. p的数量，在runtime的GoMaxProc函数影响，默认是cpu核数，如果是io密集型可以调大;在云上获得的核数是宿主机的核数，实际pod的cpu资源是受限的，造成p数量较大，可以适当调小或者引入uber的automaxprocs包
+2.1 为什么io密集型调大p数量性能会更好？因为io密集型会造成m阻塞，但是go调度器本身为了减少对m的干预，会隔一段时间才去检测m阻塞，也就不会立马把m绑定的p抢走，如果p和核数相同，cpu资源就浪费了
+3. m的数量，首先受runtime的gomaxmcount限制，最大是一万，还受到runtime.SetMaxThreads函数配置，如果没有配置，一般一个p创建一个m，如果m阻塞导致p解绑会额外创建新的m，也就算m的数量会大于等于p
