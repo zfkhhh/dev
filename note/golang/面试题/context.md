@@ -4,8 +4,8 @@ golang中context是上下文内容，作用是设置超时，同步信号，传�
 1. context接口有四个函数，Deadline返回被取消的时间；Done返回channel，被取消时关闭，多个done返回的是一个channel;Err返回结束原因，如果是被取消时Cancel错误，超时时Deadlin；Value取出存放的key对应的value
 2. canceler接口有两个函数，cancel和done：cancel方法关闭context；
 2.1 两个结构体cancelCtx和timeCtx实现了canceler接口：
-2.1.1 cancelCtx有一个children的map,用来保存所有withCancel生成的子context；
-2.1.2 timeCtx底层保存了一个cnacelCtx和timer定时器、deadline结束绝对时间，生成定时器自动调用cancel，也可以手动调用cancel，对应的是两个方法：withTimeout，超时后自动调用cancel；withDealline，到达某个绝对时间后自动调用cancel；withTimeout就是调用withDeadline，time.Now().Add(timeout)
+2.1.1 cancelCtx有一个children的map,用来保存所有withCancel生成的子context；有一个mutex锁；父context
+2.1.2 timeCtx底层保存了一个cancelCtx和timer定时器、deadline结束绝对时间，生成定时器自动调用cancel，也可以手动调用cancel，对应的是两个方法：withTimeout，超时后自动调用cancel；withDealline，到达某个绝对时间后自动调用cancel；withTimeout就是调用withDeadline，time.Now().Add(timeout)
 3. cancelCtx和timeCtx的生成方式底层实现类似，cancel通过propagateCancel将新生成的context加入传入的context的children中，timeCtx在propagateCancel上加了定时器time.AfterFunc
 3.1 propagateCancel实现就是先拿parent.Done，判断是否被cancel了
 3.2 然后找到第一个可以取消的父context(parentCancelCtx函数，主要就是断言cancelCtx类型和判断是否已cancel)
