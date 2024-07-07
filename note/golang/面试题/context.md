@@ -1,19 +1,19 @@
 golang中context是上下文内容，作用是设置超时，同步信号，传递kv
 
 一、context、canceler
-1. context接口有四个函数，Deadline返回被取消的时间；Done返回channel，被取消时关闭，多个done返回的是一个channel;Err返回结束原因，如果是被取消时Cancel错误，超时时Deadlin；Value取出存放的key对应的value
+1. context接口有四个函数，Deadline返回被取消的时间；Done返回channel，被取消时关闭，多个done返回的是一个channel;Err返回结束原因，如果是被取消是Cancel错误，超时是Deadline；Value取出存放的key对应的value
 2. canceler接口有两个函数，cancel和done：cancel方法关闭context；
-2.1 两个结构体cancelCtx和timeCtx实现了canceler接口：
-2.1.1 cancelCtx有一个children的map,用来保存所有withCancel生成的子context；有一个mutex锁；父context
+2.1 两个结构体cancelCtx和timeCtx实现了canceler接口和context接口：
+2.1.1 cancelCtx结构体包一个children的map,用来保存所有withCancel生成的子context；有一个mutex锁；父context
 2.1.2 timeCtx底层保存了一个cancelCtx和timer定时器、deadline结束绝对时间，生成定时器自动调用cancel，也可以手动调用cancel，对应的是两个方法：withTimeout，超时后自动调用cancel；withDealline，到达某个绝对时间后自动调用cancel；withTimeout就是调用withDeadline，time.Now().Add(timeout)
-3. cancelCtx和timeCtx的生成方式底层实现类似，cancel通过propagateCancel将新生成的context加入传入的context的children中，timeCtx在propagateCancel上加了定时器time.AfterFunc
+3. timeCtx组合了cancelCtx，实现是基于cancelCtx：cancelCtx通过propagateCancel将新生成的context加入传入的context的children中，timeCtx在propagateCancel上加了定时器time.AfterFunc
 3.1 propagateCancel实现就是先拿parent.Done，判断是否被cancel了
-3.2 然后找到第一个可以取消的父context(parentCancelCtx函数，主要就是断言cancelCtx类型和判断是否已cancel)
+3.2 然后判断父context是否可以取消(parentCancelCtx函数，主要就是断言cancelCtx类型和判断是否已cancel)
 3.2.1 先判断成员变量done的channel是否关闭，它是atomic.Value，实际是chan struct{},只有两个值，done函数会赋值空struct{}，cancel时会赋值close chan，关闭就返回没找到,
 3.2.2 从value中取出cancelCtxKey的内容，如果是cancelCtx类型就会取出自身，timerCtx就是取出成员变量cancelCtx，其他返回对应的value，类型断言cancelCtx，不是就没找到
 3.2.2 是的话再比对断言出来的cancelCtx的成员变量done的值（可能被赋值了），判断取出context是否被cancel了
-3.3 没找到就启动一个协程，监听父子context是否取消，父context取消调用子context cancel
-3.4 找到了父context,再判断一次是否被cancel(err是否为nil)，已被cancel就将子context cancel，没有就将子context加入父context中
+3.3 不是cancelCtx类型就启动一个协程，监听父子context是否取消，父context取消调用子context cancel
+3.4 父context是cancelCtx,再判断一次是否被cancel(err是否为nil)，已被cancel就将子context cancel，没有就将子context加入父context中
 3.5 每个操作前都检查一次是否被cancel，尽量保证父context实时有效
 4. cancelCtx的cancel方法的实现
 4.1 先获得cancelCtx里面的mutex锁
