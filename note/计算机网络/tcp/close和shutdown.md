@@ -1,0 +1,1 @@
+1. 在go中 syscall.shutdown 其实是在TCPConn.CloseRead 和 CloseWrite 中调用的，而 TCPConn.Close 调用的是 syscall.close
