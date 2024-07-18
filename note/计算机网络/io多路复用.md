@@ -1,0 +1,14 @@
+1. io多路复用指的是一个线程监听多个文件句柄，当有某个文件句柄就绪，就能通知程序进行读写，没有句柄就绪就会阻塞应用
+2. io多路复用有三种实现：select，poll, epoll
+3. select本质是通过设置或检查存放fd的集合来进行下一步工作，这造成的缺点：
+3.1 进程能打开的fd是有限的，通过fd_size设置，默认是1024
+3.2 select需要把fd集合从用户态复制到内核态，消耗大
+3.3 对fd集合的查询是线性的，采用轮询的方法效率低
+4. poll与select相比只是没有了fd数量的限制，原因是基于链表存储的；同样poll和select的缺点类似
+5. epoll是一个更高效的io复用技术，改进了select,poll的缺点；提供了三个函数epoll_create创建一个epoll句柄，epoll_ctl注册监听事件类型，epoll_wait等待事件的发生;使用时用epoll_create创建epoll句柄，epoll_ctl将要监听到socket加入epollfd，调用epoll_wait等待事件发生
+5.1 epoll在内核使用红黑树来跟踪进程所有待检测到文件句柄，epoll_ctl将socket加入内核的红黑树，而select/poll需要将整个fd集合拷贝到内核；所以epoll只需要在epoll_ctl时拷贝fd到内核，后续epoll_wait不会重复拷贝
+5.2 epoll基于事件驱动，内核维护了一个链表来记录就绪事件，当socket有事件发生时，会通过回调函数加入就绪链表，用户epoll_wait时，只返回有事件发生的句柄，而不需要轮询扫描所有句柄集合；epoll_wait会将就绪的事件从内核态拷贝到用户态
+6. epoll支持两种事件模式，边缘触发（et）和水平触发（lt）
+6.1 边缘触发：当监听的socket有事件发生时，服务端只会从epoll_wait中苏醒一次，即使没有读取完数据；所以需要程序需要保证一次读完内核缓冲区的数据
+6.2 水平触发：当监听的socket有事件发生时，服务端会不断的从epoll_wait中苏醒，直到读取完所有数据
+6.3 select/poll只有水平触发，epoll默认时水平触发，当需要读取效率可以选择边缘触发;io多路复用一般搭配非阻塞io
