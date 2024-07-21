@@ -19,7 +19,7 @@
 2.2 为producer和consumer提供关于topic对应broker节点信息
 3. broker：消息存储与中转
 3.1 每个broker包含一个broker master和至少一个broker slave，保持主从结构，可以往master生产消费消息，slave只能消费消息
-3.2 broker可以保护多个topic，topic内有多个queue，可以分布在多个broker，消息发送到topic中的queue
+3.2 broker可以保存多个topic，topic内有多个queue，可以分布在多个broker，消息发送到topic中的queue
 3.3 queue中存放消息索引，真正的消息存放在commitlog
 3.4 单个broker与所有nameserver保持长链接和心跳，定时上报topic信息
 4. producer提供三种消息发送模式
@@ -54,8 +54,14 @@
 3. 死信队列和topic没关系，一个死信队列对应一个消费组，保存了消费组的所有死信消息，当消费组没有死信消息不会创建死信队列
 
 七、队列消息顺序
-1. topic是多queue的，且分布在不同broker，所以大量消息发送到topic是无法保证消费者顺序读数据的
-2. 唯一的办法就是让topic只有一个queue，消息顺序发送，只能一个消费者读消息
+1. topic是多queue的，且分布在不同broker，支持生产者组和消费者组，所以要保证消息的顺序，需要加一些限制
+2. 消息的顺序需要有限制：
+2.1 消息生产的顺序：只能由一个生产者生产消息，不能用生产者组并发生产，也就是需要保证业务在一个pod中串行执行
+2.2 消息出入队列的顺序：消息要按先进先出顺序出入队列，这需要保证在一个topic的一个queue中，也就是需要指定topic，然后id取模指向同一个queue
+2.3 消息存储的顺序性：消息会持久化到磁盘，为了后续顺序消费需要保证持久化时也是有序的；在rokectmq中一个consumerqueue一个文件，保证好消息是同一queue，持久化就是有序的
+2.4 消息消费的顺序：也就是需要保证消费组顺序消费消息，一个方法是只有一个消费者消费自然是顺序的，一个方法是rocketmq的messageListenerOrderly，有序消费模式，通过分布式锁和本地锁保证只有一个线程消费一个队列的消息，broker的分布式锁,messageQueue的本地sync锁，ProcessQueue的本地consumerLock
+
+
 
 八、延时队列
 1. rocketmq对延时队列处理的并不好，它是通过临时存储+定时任务实现的
