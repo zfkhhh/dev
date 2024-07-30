@@ -1,0 +1,4 @@
+一、websocket
+1. websocket就是应用层解决服务端主动发送消息到客户端的协议
+2. 建立连接：tcp三次握手建立连接后，先用http通讯一次，会在http请求头携带connection:upgrade，表示要升级协议，upgrade:websocket，升级成websocket协议，同时带上一段随机base64码（sec-websocket-key），如果服务端支持升级，根据base64生成另一段字符串放到响应头，并响应101状态码
+3. websocket继承了tcp的全双工，并且解决了粘包问题，而http1.1是半双工，websocket是基于http升级，升级后和http就没关系；当然http2也是全双工的
