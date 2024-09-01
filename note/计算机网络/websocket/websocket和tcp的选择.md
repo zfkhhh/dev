@@ -1,0 +1,4 @@
+1. websocket是应用层协议，基于http协议升级，建立过程是先建立tcp连接，先进行http通讯携带websocket的信息，服务端如果支持响应101，后续就建立websocket链接；建立链接过程websocket更麻烦；所以websocket本身是基于tcp的,区别在websocket应用层的特性
+2. tcp基于字节流，需要自己定义数据结构并定义封包拆包；websocket基于数据包，无需拆分组装数据包
+3. websocket可以服务端主动推送消息给客户端；tcp需要请求响应应答，需要客户端主动请求服务端
+4. websocket可以通过tls加密为wss，tcp没有加密方案
